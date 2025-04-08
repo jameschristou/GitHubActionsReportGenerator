@@ -20,9 +20,9 @@ try
     // do something
     // have a list of sheet generators
     // each sheet generator can execute SQL to get the data it needs
-    var repo = services.GetRequiredService<IRunSummaryRepository>();
+    var repo = services.GetRequiredService<FlakyTestsRepository>();
 
-    var results = await repo.GetRunSummary(DateTime.Now.AddDays(-7));
+    var results = await repo.GetFlakyTests(DateTime.Now.AddDays(-7));
 
     var updater = services.GetRequiredService<ISheetUpdater>();
     await updater.Update();
@@ -41,6 +41,7 @@ IHostBuilder CreateHostBuilder(string[] strings)
         .ConfigureServices((_, services) =>
         {
             services.AddTransient<IRunSummaryRepository, RunSummaryRepository>();
+            services.AddTransient<FlakyTestsRepository>();
             services.AddTransient<ISheetUpdater, RunSummarySheetUpdater>();
 
             // NHibernate session factory registration
