@@ -55,7 +55,7 @@ WITH runs AS (
 			NumAttempts,
 			Conclusion,
 			DATEADD(day, - (DATEDIFF(hour, StartedAtUtc, :endDate)/(@numDaysInDateRange*24))*@numDaysInDateRange, :endDate) AS DateGroup
-	FROM	[GHAData].[dbo].[WorkflowRun]
+	FROM	[GHAData].[dbo].[WorkflowRun] WITH (NOLOCK)
 	WHERE	Conclusion in ('success', 'failure') AND StartedAtUtc < :endDate
 ),
 
@@ -65,9 +65,9 @@ runAttemptsWithFailedTests AS (
 			rj.RunAttempt,
 			DATEDIFF(minute, MIN(rj.StartedAtUtc), MAX(rj.CompletedAtUtc)) AS DurationMinutes
 	FROM	runs r
-	JOIN	[GHAData].[dbo].[WorkflowRunJob] rj
+	JOIN	[GHAData].[dbo].[WorkflowRunJob] rj WITH (NOLOCK)
 		ON	rj.WorkflowRunId = r.Id
-	JOIN	[GHAData].[dbo].[TestResult] tr
+	JOIN	[GHAData].[dbo].[TestResult] tr WITH (NOLOCK)
 		ON	tr.WorkflowRunJobId = rj.Id
 	WHERE	r.Conclusion in ('success', 'failure') AND (rj.Name LIKE 'Staging%' OR rj.Name LIKE 'Integration%') AND tr.Result = 'Failed'
 	GROUP BY r.DateGroup, r.Id, rj.RunAttempt
@@ -79,7 +79,7 @@ runAttemptsWithFailedJobs AS (
 			rj.RunAttempt,
 			DATEDIFF(minute, MIN(rj.StartedAtUtc), MAX(rj.CompletedAtUtc)) AS DurationMinutes
 	FROM	runs r
-	JOIN	[GHAData].[dbo].[WorkflowRunJob] rj
+	JOIN	[GHAData].[dbo].[WorkflowRunJob] rj WITH (NOLOCK)
 		ON	rj.WorkflowRunId = r.Id
 	WHERE	r.Conclusion in ('success', 'failure') AND rj.Name NOT LIKE 'Regression1%' AND rj.Conclusion = 'failure'
 	GROUP BY r.DateGroup, r.Id, rj.RunAttempt
@@ -89,9 +89,9 @@ flakyTests AS (
 	SELECT	r.DateGroup,
 			tr.Name AS TestName
 	FROM	runs r
-	JOIN	[GHAData].[dbo].[WorkflowRunJob] rj
+	JOIN	[GHAData].[dbo].[WorkflowRunJob] rj WITH (NOLOCK)
 		ON	rj.WorkflowRunId = r.Id
-	JOIN	[GHAData].[dbo].[TestResult] tr
+	JOIN	[GHAData].[dbo].[TestResult] tr WITH (NOLOCK)
 		ON	tr.WorkflowRunJobId = rj.Id
 	WHERE	r.Conclusion in ('success', 'failure') AND (rj.Name LIKE 'Staging%' OR rj.Name LIKE 'Integration%') AND tr.Result = 'Failed'
 			AND r.RunId NOT IN (10804295680, 11906090216) -- runId ignore list in case something went wrong with these runs
@@ -194,7 +194,7 @@ LEFT JOIN
 ) AS FlakyTests
 ON FlakyTests.DateGroup = Durations.DateGroup
 ORDER BY Durations.DateGroup DESC")
-			.AddScalar("WeekStarting", NHibernateUtil.DateTime)
+            .AddScalar("WeekStarting", NHibernateUtil.DateTime)
 			.AddScalar("AvgDurationForSuccessfulRuns", NHibernateUtil.Int32)
 			.AddScalar("MaxDurationForSuccessfulRuns", NHibernateUtil.Int32)
 			.AddScalar("MinDurationForSuccessfulRuns", NHibernateUtil.Int32)
@@ -206,7 +206,8 @@ ORDER BY Durations.DateGroup DESC")
 			.AddScalar("MinutesWastedDueToFailingTests", NHibernateUtil.Int32)
 			.AddScalar("TotalMinutesWasted", NHibernateUtil.Int32)
             .SetParameter("endDate", endDate)
-			.SetResultTransformer(Transformers.AliasToBean<WeeklyRunSummary>());
+			.SetResultTransformer(Transformers.AliasToBean<WeeklyRunSummary>())
+            .SetTimeout(180);
 
             return await query.ListAsync<WeeklyRunSummary>();
         }

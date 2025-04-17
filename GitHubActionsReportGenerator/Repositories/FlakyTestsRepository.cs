@@ -221,7 +221,8 @@ namespace GitHubActionsReportGenerator.Repositories
             .AddScalar("NumberOfRunsImpacted", NHibernateUtil.Int32)
             .AddScalar("FailureCountLast4Weeks", NHibernateUtil.Int32)
             .SetParameter("endDate", endDate)
-            .SetResultTransformer(Transformers.AliasToBean<FlakyTest>());
+            .SetResultTransformer(Transformers.AliasToBean<FlakyTest>())
+			.SetTimeout(180);
 
             return await query.ListAsync<FlakyTest>();
         }
