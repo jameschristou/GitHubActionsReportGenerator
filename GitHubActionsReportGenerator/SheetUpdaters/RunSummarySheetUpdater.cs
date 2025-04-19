@@ -18,7 +18,7 @@ namespace GitHubActionsReportGenerator.SheetGenerators
             // then check whether we are inserting a new record or updating an existing one
             var lastWeekStarting = GetWeekStartingOfMostRecentRecordOnReport();
 
-            var endDate = GetNextMonday();
+            var endDate = GetReportEndDate();
 
             // ok now we need to loop through the data and insert records where needed or update existing records
             // first get the data required from the DB
@@ -30,23 +30,12 @@ namespace GitHubActionsReportGenerator.SheetGenerators
             // update the first record
             var recordToUpdate = recordsToInsert.FirstOrDefault(x => x.WeekStarting == lastWeekStarting);
 
-            var requestBody = new Google.Apis.Sheets.v4.Data.BatchUpdateSpreadsheetRequest
+            var requestBody = new BatchUpdateSpreadsheetRequest
             {
-                Requests = new List<Google.Apis.Sheets.v4.Data.Request>()
+                Requests = new List<Request>()
             };
 
-            // Get sheet ID
-            var service = CreateSheetsService();
-
-            var spreadsheet = service.Spreadsheets.Get(_spreadsheetId).Execute();
-            var sheet = spreadsheet.Sheets.FirstOrDefault(s => s.Properties.Title == SheetName);
-
-            if (sheet == null)
-            {
-                throw new Exception($"Sheet '{SheetName}' not found in spreadsheet.");
-            }
-
-            var sheetId = sheet.Properties.SheetId.Value;
+            var sheetId = GetSheetId();
 
             requestBody.Requests.Add(CreateUpdateRowRequest(recordToUpdate, sheetId));
 
@@ -73,26 +62,22 @@ namespace GitHubActionsReportGenerator.SheetGenerators
             }
 
             // Execute the batch update
-            var batchUpdateRequest = service.Spreadsheets.BatchUpdate(requestBody, _spreadsheetId);
+            var batchUpdateRequest = _sheetsService.Spreadsheets.BatchUpdate(requestBody, _spreadsheetId);
             var batchUpdateResponse = batchUpdateRequest.Execute();
 
             // populates data into the appropriate row
             return;
         }
 
-
         private DateTime GetWeekStartingOfMostRecentRecordOnReport()
         {
             try
             {
-                // Create Google Sheets API service
-                var service = CreateSheetsService();
-
                 // Define the range to read (A2 - first column of second row)
                 string range = $"{SheetName}!A2:A2";
 
                 // Request data from the spreadsheet
-                var request = service.Spreadsheets.Values.Get(_spreadsheetId, range);
+                var request = _sheetsService.Spreadsheets.Values.Get(_spreadsheetId, range);
                 var response = request.Execute();
                 var values = response.Values;
 
@@ -114,21 +99,6 @@ namespace GitHubActionsReportGenerator.SheetGenerators
                 Console.WriteLine($"Error reading date from sheet: {ex.Message}");
                 return DateTime.MinValue;
             }
-        }
-
-        private DateTime GetNextMonday()
-        {
-            DateTime today = DateTime.Now.Date;
-            int daysUntilMonday = ((int)DayOfWeek.Monday - (int)today.DayOfWeek + 7) % 7;
-
-            // If today is Monday, return today's date
-            if (daysUntilMonday == 0)
-            {
-                return today;
-            }
-
-            // Otherwise, return the date of the next Monday
-            return today.AddDays(daysUntilMonday);
         }
 
         private Request CreateUpdateRowRequest(WeeklyRunSummary data, int sheetId)

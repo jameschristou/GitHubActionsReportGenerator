@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Net.WebSockets;
 using GitHubActionsReportGenerator;
 using GitHubActionsReportGenerator.SheetGenerators;
+using GitHubActionsReportGenerator.SheetUpdaters;
 
 using IHost host = CreateHostBuilder(args).Build();
 using var scope = host.Services.CreateScope();
@@ -17,15 +18,12 @@ var services = scope.ServiceProvider;
 
 try
 {
-    // do something
-    // have a list of sheet generators
-    // each sheet generator can execute SQL to get the data it needs
-    var repo = services.GetRequiredService<FlakyTestsRepository>();
-
-    var results = await repo.GetFlakyTests(DateTime.Now.AddDays(-7));
-
-    var updater = services.GetRequiredService<ISheetUpdater>();
-    await updater.Update();
+    // Get all registered sheet updaters
+    var updaters = services.GetServices<ISheetUpdater>();
+    foreach (var updater in updaters)
+    {
+        await updater.Update();
+    }
     var test = 1;
 }
 catch (Exception e)
@@ -42,7 +40,13 @@ IHostBuilder CreateHostBuilder(string[] strings)
         {
             services.AddTransient<IRunSummaryRepository, RunSummaryRepository>();
             services.AddTransient<FlakyTestsRepository>();
+
+            // Register all sheet updaters
             services.AddTransient<ISheetUpdater, RunSummarySheetUpdater>();
+            services.AddTransient<ISheetUpdater, FlakyTestsSheetUpdater>();
+            // Add any additional sheet updaters here
+            // services.AddTransient<ISheetUpdater, AnotherSheetUpdater>();
+            // services.AddTransient<ISheetUpdater, YetAnotherSheetUpdater>();
 
             // NHibernate session factory registration
             services.AddSingleton<ISessionFactory>(CreateNHibernateSessionFactory());
