@@ -77,7 +77,7 @@ namespace GitHubActionsReportGenerator.Repositories
 					AND wrj.Name LIKE '% API %'
 			),
 			test_results_to_ignore AS (
-				-- if a run attempt has had more than 4 failed tests, it's likely there's been some other issues and it's not related to flaky tests
+				-- if a run attempt has had more than 10 failed tests, it's likely there's been some other issues and it's not related to flaky tests
 				SELECT	RunId,
 						RunAttempt
 				FROM	unfiltered_test_results_last_4weeks
@@ -189,7 +189,6 @@ namespace GitHubActionsReportGenerator.Repositories
 				SELECT TestsThatFailedWithinARun.Name
 				FROM
 				(
-		
 					SELECT	RunId,
 							Name
 					FROM	tests_with_failures

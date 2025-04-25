@@ -4,13 +4,13 @@ using Google.Apis.Sheets.v4.Data;
 
 namespace GitHubActionsReportGenerator.SheetUpdaters
 {
-    public class FlakyTestsSheetUpdater : BaseSheetGenerator
+    public class SlowestTestsSheetUpdater : BaseSheetGenerator
     {
-        private readonly FlakyTestsRepository _repository;
+        private readonly SlowestTestsRepository _repository;
 
-        public FlakyTestsSheetUpdater(FlakyTestsRepository repository)
+        public SlowestTestsSheetUpdater(SlowestTestsRepository repository)
         {
-            SheetName = "Tests Likely To Be Flaky";
+            SheetName = "Slowest Tests";
             _repository = repository;
         }
 
@@ -18,16 +18,7 @@ namespace GitHubActionsReportGenerator.SheetUpdaters
         {
             var endDate = DateTime.UtcNow.Date; //GetReportEndDate();
 
-            // get the flaky tests
-            // we only look at test results from the previous 4 weeks and a test must have failed at least once during the last week to be considered flaky
-            var flakyTests = (await _repository.GetFlakyTests(endDate)).OrderBy(f => f.FailureCount);
-
-            // how do we keep notes and jira numbers??
-            // maybe we read the existing data and try and match any additional data added to the sheet by the name of the test?
-            // TODO: we'll do this as an improvement
-
-            // we no longer keep all the data for this. It's not really useful to see and hard to keep it up to date
-            // we keep refreshing this sheet with the latest data
+            var slowTests = await _repository.GetSlowTests(endDate);
 
             var requestBody = new BatchUpdateSpreadsheetRequest
             {
@@ -45,7 +36,7 @@ namespace GitHubActionsReportGenerator.SheetUpdaters
             var sheetId = GetSheetId();
 
             // then we get the new data
-            foreach (var flakyTest in flakyTests)
+            foreach (var slowTest in slowTests.OrderBy(t => t.MinDurationSecondsLastWeek))
             {
                 // request to insert a row
                 requestBody.Requests.Add(new Request
@@ -68,15 +59,13 @@ namespace GitHubActionsReportGenerator.SheetUpdaters
                 {
                     Values = new List<CellData>
                     {
-                        new CellData { UserEnteredValue = new ExtendedValue { StringValue = flakyTest.TestName } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.AvgDurationSeconds } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.MaxDurationSeconds } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.MinDurationSeconds } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.FailureCount } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.SuccessCount } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.FailurePercentage } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.NumberOfRunsImpacted } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.FailureCountLast4Weeks } }
+                        new CellData { UserEnteredValue = new ExtendedValue { StringValue = slowTest.TestName } },
+                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = slowTest.AvgDurationSecondsLastWeek } },
+                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = slowTest.MaxDurationSecondsLastWeek } },
+                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = slowTest.MinDurationSecondsLastWeek } },
+                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = slowTest.AvgDurationSecondsLast4Weeks } },
+                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = slowTest.MaxDurationSecondsLast4Weeks } },
+                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = slowTest.MinDurationSecondsLast4Weeks } }
                     }
                 };
 
