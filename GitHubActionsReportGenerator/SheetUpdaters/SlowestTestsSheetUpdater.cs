@@ -4,7 +4,7 @@ using Google.Apis.Sheets.v4.Data;
 
 namespace GitHubActionsReportGenerator.SheetUpdaters
 {
-    public class SlowestTestsSheetUpdater : BaseSheetGenerator
+    public class SlowestTestsSheetUpdater : BaseSheetUpdater
     {
         private readonly SlowestTestsRepository _repository;
 

@@ -3,7 +3,7 @@ using Google.Apis.Sheets.v4.Data;
 
 namespace GitHubActionsReportGenerator.SheetGenerators
 {
-    public class RunSummarySheetUpdater : BaseSheetGenerator
+    public class RunSummarySheetUpdater : BaseSheetUpdater
     {
         private readonly IRunSummaryRepository _runSummaryRepository;
 

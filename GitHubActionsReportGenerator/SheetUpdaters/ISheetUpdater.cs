@@ -1,7 +1,6 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
-using Google.Apis.Sheets.v4.Data;
 
 namespace GitHubActionsReportGenerator.SheetGenerators
 {
@@ -10,7 +9,7 @@ namespace GitHubActionsReportGenerator.SheetGenerators
         Task Update();
     }
 
-    public abstract class BaseSheetGenerator : ISheetUpdater
+    public abstract class BaseSheetUpdater : ISheetUpdater
     {
         public string SheetName { get; set; }
 
@@ -20,7 +19,7 @@ namespace GitHubActionsReportGenerator.SheetGenerators
         private readonly string _credentialPath = "";
         protected SheetsService _sheetsService;
 
-        public BaseSheetGenerator()
+        public BaseSheetUpdater()
         {
             _credential = GoogleCredential.FromFile(_credentialPath).CreateScoped(SheetsService.Scope.Spreadsheets);
             _sheetsService = CreateSheetsService();

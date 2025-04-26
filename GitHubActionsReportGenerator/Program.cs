@@ -42,12 +42,15 @@ IHostBuilder CreateHostBuilder(string[] strings)
             services.AddTransient<FlakyTestsRepository>();
             services.AddTransient<SlowestTestsRepository>();
             services.AddTransient<JobMetricsRepository>();
+            services.AddTransient<FlakyTestFailuresRepository>();
 
             // Register all sheet updaters
             services.AddTransient<ISheetUpdater, RunSummarySheetUpdater>();
             services.AddTransient<ISheetUpdater, FlakyTestsSheetUpdater>();
             services.AddTransient<ISheetUpdater, SlowestTestsSheetUpdater>();
             services.AddTransient<ISheetUpdater, JobMetricsSheetUpdater>();
+            services.AddTransient<ISheetUpdater, FlakyTestFailuresSheetUpdater>();
+            services.AddTransient<ISheetUpdater, AboutSheetUpdater>();
 
             // NHibernate session factory registration
             services.AddSingleton<ISessionFactory>(CreateNHibernateSessionFactory());

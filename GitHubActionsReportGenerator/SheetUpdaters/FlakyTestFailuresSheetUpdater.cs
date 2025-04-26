@@ -1,16 +1,22 @@
 ﻿using GitHubActionsReportGenerator.Repositories;
 using GitHubActionsReportGenerator.SheetGenerators;
 using Google.Apis.Sheets.v4.Data;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace GitHubActionsReportGenerator.SheetUpdaters
 {
-    public class FlakyTestsSheetUpdater : BaseSheetUpdater
+    public class FlakyTestFailuresSheetUpdater : BaseSheetUpdater
     {
-        private readonly FlakyTestsRepository _repository;
+        private readonly FlakyTestFailuresRepository _repository;
 
-        public FlakyTestsSheetUpdater(FlakyTestsRepository repository)
+        public FlakyTestFailuresSheetUpdater(FlakyTestFailuresRepository repository)
         {
-            SheetName = "Tests Likely To Be Flaky";
+            SheetName = "Flaky Test Failures";
             _repository = repository;
         }
 
@@ -20,7 +26,7 @@ namespace GitHubActionsReportGenerator.SheetUpdaters
 
             // get the flaky tests
             // we only look at test results from the previous 4 weeks and a test must have failed at least once during the last week to be considered flaky
-            var flakyTests = (await _repository.GetFlakyTests(endDate)).OrderBy(f => f.FailureCount);
+            var flakyTestFailures = await _repository.GetFlakyTestFailures(endDate);
 
             // how do we keep notes and jira numbers??
             // maybe we read the existing data and try and match any additional data added to the sheet by the name of the test?
@@ -45,7 +51,7 @@ namespace GitHubActionsReportGenerator.SheetUpdaters
             var sheetId = GetSheetId();
 
             // then we get the new data
-            foreach (var flakyTest in flakyTests)
+            foreach (var flakyTestFailure in flakyTestFailures.OrderBy(t => t.StartedAtUtc))
             {
                 // request to insert a row
                 requestBody.Requests.Add(new Request
@@ -68,15 +74,22 @@ namespace GitHubActionsReportGenerator.SheetUpdaters
                 {
                     Values = new List<CellData>
                     {
-                        new CellData { UserEnteredValue = new ExtendedValue { StringValue = flakyTest.TestName } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.AvgDurationSeconds } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.MaxDurationSeconds } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.MinDurationSeconds } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.FailureCount } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.SuccessCount } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.FailurePercentage } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.NumberOfRunsImpacted } },
-                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTest.FailureCountLast4Weeks } }
+                        new CellData { UserEnteredValue = new ExtendedValue { StringValue = flakyTestFailure.TestName } },
+                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTestFailure.RunId } },
+                        new CellData { UserEnteredValue = new ExtendedValue { NumberValue = flakyTestFailure.RunAttempt } },
+                        new CellData { UserEnteredValue = new ExtendedValue { StringValue = flakyTestFailure.JobUrl } },
+                        new CellData {
+                            UserEnteredValue = new ExtendedValue { 
+                                // Convert DateTime to Google Sheets serial number
+                                NumberValue = (flakyTestFailure.StartedAtUtc - new DateTime(1899, 12, 30)).TotalDays
+                            },
+                            UserEnteredFormat = new CellFormat {
+                                NumberFormat = new NumberFormat {
+                                    Type = "DATE_TIME",
+                                    Pattern = "yyyy-MM-dd HH:mm:ss.SSS"
+                                }
+                            }
+                        },
                     }
                 };
 

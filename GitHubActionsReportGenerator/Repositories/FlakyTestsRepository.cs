@@ -205,6 +205,7 @@ namespace GitHubActionsReportGenerator.Repositories
 				) AS TestsThatFailedWithinARun
 				ON TestsThatFailedWithinARun.RunId = TestsThatPassedWithinARun.RunId
 					AND TestsThatFailedWithinARun.Name = TestsThatPassedWithinARun.Name
+				GROUP BY TestsThatFailedWithinARun.Name
 			) AS LikelyFlakyTests
 			ON LikelyFlakyTests.Name = Durations.Name
 			ORDER by --MinDurationSeconds desc

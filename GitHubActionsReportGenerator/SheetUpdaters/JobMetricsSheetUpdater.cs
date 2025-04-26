@@ -4,7 +4,7 @@ using Google.Apis.Sheets.v4.Data;
 
 namespace GitHubActionsReportGenerator.SheetUpdaters
 {
-    public class JobMetricsSheetUpdater : BaseSheetGenerator
+    public class JobMetricsSheetUpdater : BaseSheetUpdater
     {
         private readonly JobMetricsRepository _repository;
 
