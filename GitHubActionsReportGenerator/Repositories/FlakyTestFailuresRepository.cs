@@ -31,8 +31,9 @@ namespace GitHubActionsReportGenerator.Repositories
 					@fromDate4weeks DATETIME = DATEADD(d, -28, :endDate),
 					@endDate DATETIME = :endDate;
 
-            WITH unfiltered_test_results_last_4weeks AS (
-				SELECT	SUBSTRING(wrj.Name, LEN(wrj.Name) - CHARINDEX('/', REVERSE(wrj.Name)) + 3, LEN(wrj.Name)) + ' ' + tr.Name AS Name,
+            WITH unfiltered_cypress_test_results_last_4weeks AS (
+				SELECT	SUBSTRING(wrj.Name, LEN(wrj.Name) - CHARINDEX('/', REVERSE(wrj.Name)) + 3, LEN(wrj.Name)) AS JobName,
+						tr.Name AS TestName,
 						DurationMs/1000 AS DurationSeconds,
 						Result,
 						wrj.Url,
@@ -47,6 +48,16 @@ namespace GitHubActionsReportGenerator.Repositories
 				WHERE r.Conclusion in ('success', 'failure') 
 					AND wrj.StartedAtUtc > @fromDate4weeks
 					AND wrj.Name LIKE '%cypress%'
+			),
+			unfiltered_test_results_last_4weeks AS (
+				SELECT	LEFT(JobName, CHARINDEX('-', JobName) - 1) + ' ' + TestName AS Name,
+						DurationSeconds,
+						Result,
+						Url,
+						StartedAtUtc,
+						RunId,
+						RunAttempt
+				FROM	unfiltered_cypress_test_results_last_4weeks
 
 				UNION
 
